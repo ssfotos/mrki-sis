@@ -7,12 +7,12 @@ import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 
 const SettingsView: React.FC = () => {
-    // Fix: Add `setCategories` to the destructuring from `useApp` to make it available in the component.
     const { 
         products, suppliers, sales, purchases, onlineOrders,
         setProducts, setSuppliers, setSales, setPurchases, setOnlineOrders, setCart,
         categories, setCategories,
-        clients, setClients
+        clients, setClients,
+        updatePassword
     } = useApp();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -21,6 +21,11 @@ const SettingsView: React.FC = () => {
     
     const [importPreviewData, setImportPreviewData] = useState<any>(null);
     const [isImportConfirmModalOpen, setImportConfirmModalOpen] = useState(false);
+    
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordChangeMessage, setPasswordChangeMessage] = useState({ type: '', text: '' });
 
 
     const handleExport = () => {
@@ -90,7 +95,9 @@ const SettingsView: React.FC = () => {
     };
 
     const handleClearData = () => {
-        if (adminPassword !== 'admin') {
+        // The password for clearing data should also be dynamic
+        const success = updatePassword(adminPassword, adminPassword);
+        if (!success) {
             setPasswordError('Contraseña incorrecta.');
             return;
         }
@@ -107,10 +114,69 @@ const SettingsView: React.FC = () => {
         setConfirmModalOpen(false);
         alert("Todos los datos han sido borrados.");
     };
+    
+    const handleChangePassword = (e: React.FormEvent) => {
+        e.preventDefault();
+        setPasswordChangeMessage({ type: '', text: '' });
+
+        if (newPassword !== confirmPassword) {
+            setPasswordChangeMessage({ type: 'error', text: 'Las nuevas contraseñas no coinciden.' });
+            return;
+        }
+        if (newPassword.length < 4) {
+             setPasswordChangeMessage({ type: 'error', text: 'La nueva contraseña debe tener al menos 4 caracteres.' });
+            return;
+        }
+
+        const success = updatePassword(currentPassword, newPassword);
+
+        if (success) {
+            setPasswordChangeMessage({ type: 'success', text: '¡Contraseña actualizada con éxito!' });
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } else {
+            setPasswordChangeMessage({ type: 'error', text: 'La contraseña actual es incorrecta.' });
+        }
+    };
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             <h1 className="text-3xl font-bold text-gray-800">Configuración</h1>
+
+            <Card title="Cambiar Contraseña">
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                    <Input
+                        label="Contraseña Actual"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        required
+                    />
+                    <Input
+                        label="Nueva Contraseña"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                    />
+                    <Input
+                        label="Confirmar Nueva Contraseña"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                    />
+                    {passwordChangeMessage.text && (
+                        <p className={`text-sm ${passwordChangeMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                            {passwordChangeMessage.text}
+                        </p>
+                    )}
+                    <div className="flex justify-end">
+                        <Button type="submit">Actualizar Contraseña</Button>
+                    </div>
+                </form>
+            </Card>
 
             <Card title="Gestión de Datos">
                 <div className="space-y-4">
@@ -140,7 +206,7 @@ const SettingsView: React.FC = () => {
 
             <Modal isOpen={isConfirmModalOpen} onClose={() => setConfirmModalOpen(false)} title="Confirmación Requerida">
                 <div className="space-y-4">
-                    <p>Esta acción es irreversible. Para confirmar que deseas borrar todos los datos de la aplicación, por favor ingresa la contraseña de administrador ("admin").</p>
+                    <p>Esta acción es irreversible. Para confirmar que deseas borrar todos los datos de la aplicación, por favor ingresa tu contraseña de administrador.</p>
                     <Input
                         label="Contraseña de Administrador"
                         type="password"

@@ -16,7 +16,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     e.preventDefault();
     const success = onLogin(password);
     if (!success) {
-      setError('Contraseña inválida. Pista: intenta con "admin".');
+      setError('Contraseña inválida.');
     }
   };
 

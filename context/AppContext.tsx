@@ -34,6 +34,7 @@ interface AppContextType {
     isAuthenticated: boolean;
     login: (password: string) => boolean;
     logout: () => void;
+    updatePassword: (oldPassword: string, newPassword: string) => boolean;
     
     products: Product[];
     addProduct: (product: Omit<Product, 'id'>) => Product;
@@ -95,6 +96,7 @@ const generateUniqueId = (prefix: string) => {
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [password, setPassword] = useLocalStorage<string>('admin-password', 'admin');
     
     const [products, setProducts] = useLocalStorage<Product[]>('products', initialProductsData);
     const [suppliers, setSuppliers] = useLocalStorage<Supplier[]>('suppliers', initialSuppliersData);
@@ -110,8 +112,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return products.filter(p => p.stock <= p.lowStockThreshold);
     }, [products]);
 
-    const login = (password: string): boolean => {
-        if (password === 'admin') {
+    const login = (inputPassword: string): boolean => {
+        if (inputPassword === password) {
             setIsAuthenticated(true);
             return true;
         }
@@ -120,6 +122,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const logout = () => {
         setIsAuthenticated(false);
+    };
+    
+    const updatePassword = (oldPassword: string, newPassword: string): boolean => {
+        if (oldPassword === password) {
+            setPassword(newPassword);
+            return true;
+        }
+        return false;
     };
     
     // Stock History Management
@@ -412,6 +422,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         isAuthenticated,
         login,
         logout,
+        updatePassword,
         products,
         addProduct,
         updateProduct,
