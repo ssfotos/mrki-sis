@@ -1,5 +1,5 @@
 {
-  "name": "MRKI- Sistema de Inventario y POS",
+  "name": "MRKI- Sistema de Inventario y POS BD",
   "description": "Un sistema minimalista todo en uno para gestionar stock, compras y punto de venta. Incluye reportes, un catálogo de productos en línea y un carrito de compras. Todos los datos se almacenan localmente en su navegador para privacidad y acceso sin conexión.",
   "requestFramePermissions": []
 }

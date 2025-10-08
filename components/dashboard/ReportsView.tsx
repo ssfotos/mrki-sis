@@ -38,8 +38,11 @@ const ReportsView: React.FC = () => {
         return { filteredSales: fs, filteredPurchases: fp };
     }, [sales, purchases, startDate, endDate]);
 
-
-    const totalRevenue = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    const completedSales = useMemo(() => {
+        return filteredSales.filter(s => s.status !== 'cancelled');
+    }, [filteredSales]);
+    
+    const totalRevenue = completedSales.reduce((sum, s) => sum + s.total, 0);
     const totalPurchaseCost = filteredPurchases.reduce((sum, p) => sum + p.total, 0);
     
     const detailedSalesReport = useMemo(() => {
@@ -61,12 +64,15 @@ const ReportsView: React.FC = () => {
                     revenue,
                     cost,
                     profit,
+                    status: sale.status,
                 };
             })
         ).sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
     }, [filteredSales, products, clientMap]);
     
-    const totalProfit = detailedSalesReport.reduce((sum, item) => sum + item.profit, 0);
+    const totalProfit = detailedSalesReport
+        .filter(item => item.status !== 'cancelled')
+        .reduce((sum, item) => sum + item.profit, 0);
 
      const detailedPurchasesReport = useMemo(() => {
         return filteredPurchases.flatMap(purchase =>
@@ -138,6 +144,7 @@ const ReportsView: React.FC = () => {
         "Ingresos": item.revenue.toFixed(2),
         "Costo": item.cost.toFixed(2),
         "Ganancia": item.profit.toFixed(2),
+        "Estado": item.status === 'cancelled' ? 'Anulada' : 'Completada',
     }));
 
 
@@ -176,9 +183,9 @@ const ReportsView: React.FC = () => {
 
             <Card title="Reporte de Ventas Detallado" actions={<Button size="sm" variant="secondary" onClick={() => exportToExcel(formattedSalesReport, 'reporte_ventas_detallado')}>Exportar a Excel</Button>}>
                  <div className="overflow-x-auto">
-                    <Table headers={['ID Venta', 'Fecha', 'Cliente', 'Producto', 'Cant.', 'P/U Venta', 'Ingresos', 'Costo', 'Ganancia']}>
+                    <Table headers={['ID Venta', 'Fecha', 'Cliente', 'Producto', 'Cant.', 'P/U Venta', 'Ingresos', 'Costo', 'Ganancia', 'Estado']}>
                         {formattedSalesReport.map((item, index) => (
-                            <tr key={index}>
+                            <tr key={index} className={item.Estado === 'Anulada' ? 'bg-red-50 text-gray-500 line-through' : ''}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item['ID Venta']}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.Fecha}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">{item.Cliente}</td>
@@ -188,6 +195,15 @@ const ReportsView: React.FC = () => {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-700">${item.Ingresos}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-700">${item.Costo}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-700">${item.Ganancia}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                        item.Estado === 'Anulada' 
+                                        ? 'bg-red-100 text-red-800' 
+                                        : 'bg-green-100 text-green-800'
+                                    }`}>
+                                        {item.Estado}
+                                    </span>
+                                </td>
                             </tr>
                         ))}
                     </Table>

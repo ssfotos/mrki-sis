@@ -1,6 +1,4 @@
-
-
-import React, { useState, ChangeEvent, useRef } from 'react';
+import React, { useState, ChangeEvent, useRef, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Product, StockHistory } from '../../types';
 import Card from '../ui/Card';
@@ -29,11 +27,42 @@ export const ProductForm: React.FC<{ // Exported for use in PurchasesView
         image: product?.image || '',
         description: product?.description || '',
     });
+    const [profitMargin, setProfitMargin] = useState<string | number>('');
+
+    useEffect(() => {
+        const cost = formData.costPrice;
+        const selling = formData.sellingPrice;
+        if (cost > 0 && selling > 0) {
+            const margin = ((selling - cost) / cost) * 100;
+            setProfitMargin(margin.toFixed(2));
+        } else {
+            setProfitMargin('');
+        }
+    }, [formData.costPrice, formData.sellingPrice]);
+
+    const handleMarginChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const marginValue = e.target.value;
+        setProfitMargin(marginValue);
+
+        const newMargin = parseFloat(marginValue);
+        if (!isNaN(newMargin) && formData.costPrice > 0) {
+            const newSellingPrice = formData.costPrice * (1 + newMargin / 100);
+            setFormData(prev => ({
+                ...prev,
+                sellingPrice: parseFloat(newSellingPrice.toFixed(2))
+            }));
+        }
+    };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         const numericFields = ['stock', 'lowStockThreshold', 'costPrice', 'sellingPrice'];
-        setFormData(prev => ({ ...prev, [name]: numericFields.includes(name) ? Number(value) : value }));
+        
+        setFormData(prev => {
+            const isNumeric = numericFields.includes(name);
+            const parsedValue = isNumeric ? Number(value) : value;
+            return { ...prev, [name]: parsedValue };
+        });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -85,8 +114,9 @@ export const ProductForm: React.FC<{ // Exported for use in PurchasesView
                 <Input name="stock" label="Stock Actual" type="number" value={formData.stock} onChange={handleChange} required />
                 <Input name="lowStockThreshold" label="Umbral Stock Bajo" type="number" value={formData.lowStockThreshold} onChange={handleChange} required />
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input name="costPrice" label="Precio de Costo" type="number" step="0.01" value={formData.costPrice} onChange={handleChange} />
+                <Input name="profitMargin" label="Porcentaje de Ganancia (%)" type="number" step="0.01" value={profitMargin} onChange={handleMarginChange} />
                 <Input name="sellingPrice" label="Precio de Venta" type="number" step="0.01" value={formData.sellingPrice} onChange={handleChange} required />
             </div>
              <Input name="image" label="URL de la Imagen" value={formData.image} onChange={handleChange} />
@@ -128,6 +158,7 @@ const ProductDetailModal: React.FC<{
         purchase: 'Compra',
         manual_adjustment: 'Ajuste Manual',
         initial_stock: 'Stock Inicial',
+        sale_cancellation: 'Venta Anulada',
     };
     
     const typeStyles: { [key in StockHistory['type']]: string } = {
@@ -135,6 +166,7 @@ const ProductDetailModal: React.FC<{
         purchase: 'bg-green-100 text-green-800',
         manual_adjustment: 'bg-yellow-100 text-yellow-800',
         initial_stock: 'bg-blue-100 text-blue-800',
+        sale_cancellation: 'bg-purple-100 text-purple-800',
     };
 
     const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
@@ -236,10 +268,19 @@ const ProductsView: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm) {
+            return products;
+        }
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return products.filter(product =>
+            product.name.toLowerCase().includes(lowercasedTerm) ||
+            (product.description && product.description.toLowerCase().includes(lowercasedTerm))
+        );
+    }, [products, searchTerm]);
 
-    const getSupplierName = (id: string) => suppliers.find(s => s.id === id)?.name || 'N/A';
-    
     const handleSave = (data: Omit<Product, 'id'> | Product) => {
         if ('id' in data) {
             updateProduct(data);
@@ -289,6 +330,26 @@ const ProductsView: React.FC = () => {
 
     const handleImportClick = () => {
         fileInputRef.current?.click();
+    };
+
+    const handleExportAll = () => {
+        const supplierMap = new Map(suppliers.map(s => [s.id, s.name]));
+        const dataToExport = products.map(p => ({
+            'Nombre': p.name,
+            'SKU': p.sku,
+            'Categoría (Rubro)': p.category,
+            'Proveedor': supplierMap.get(p.supplierId) || 'N/A',
+            'Stock Actual': p.stock,
+            'Umbral Stock Bajo': p.lowStockThreshold,
+            'Precio de Costo': p.costPrice,
+            'Precio de Venta': p.sellingPrice,
+            'URL de Imagen': p.image,
+            'Descripción': p.description,
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario de Productos");
+        XLSX.writeFile(workbook, `inventario_completo_mrk_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -353,10 +414,11 @@ const ProductsView: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="space-y-4 h-full flex flex-col">
+            <div className="flex justify-between items-center flex-shrink-0">
                 <h1 className="text-3xl font-bold text-gray-800">Gestión de Productos</h1>
                  <div className="flex space-x-2">
+                    <Button onClick={handleExportAll} variant="secondary">Exportar Todo (XLS)</Button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx, .xls" className="hidden" />
                     <Button onClick={handleImportClick} variant="secondary">Importar desde XLS</Button>
                     <Button onClick={handleDownloadTemplate} variant="secondary">Descargar Plantilla</Button>
@@ -366,40 +428,53 @@ const ProductsView: React.FC = () => {
                 </div>
             </div>
 
-            <Card>
-                <Table headers={['Producto', 'SKU', 'Rubro', 'Proveedor', 'Stock', 'Precio Venta', 'Acciones']}>
-                    {products.map(p => (
-                        <tr key={p.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-10 w-10">
-                                        <img className="h-10 w-10 rounded-full object-cover" src={p.image || 'https://picsum.photos/40/40'} alt={p.name} />
-                                    </div>
-                                    <div className="ml-4">
-                                        <div className="text-sm font-medium text-gray-900">{p.name}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.sku}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.category}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getSupplierName(p.supplierId)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <span className={p.stock <= p.lowStockThreshold ? 'text-red-500 font-bold' : 'text-gray-900'}>
-                                    {p.stock}
-                                </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">${p.sellingPrice.toFixed(2)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleView(p)}>Ver</Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleEdit(p)}>Editar</Button>
-                                <Button variant="ghost" size="sm" onClick={() => setProductToDelete(p)}>
-                                    <TrashIcon className="h-5 w-5 text-red-500" />
-                                </Button>
-                            </td>
-                        </tr>
-                    ))}
-                </Table>
-            </Card>
+            <div className="flex-shrink-0">
+                <Input
+                    type="search"
+                    placeholder="Buscar por nombre o descripción..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    containerClassName="w-full md:w-2/5"
+                />
+            </div>
+            
+            <div className="flex-grow overflow-hidden">
+                <div className="bg-white shadow-md rounded-lg h-full flex flex-col">
+                    <div className="flex-grow overflow-y-auto" style={{ overflowX: 'scroll' }}>
+                        <Table headers={['Producto', 'Precio Venta', 'Acciones']}>
+                            {filteredProducts.map(p => (
+                                <tr key={p.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <div className="flex-shrink-0 h-10 w-10">
+                                                <img className="h-10 w-10 rounded-full object-cover" src={p.image || 'https://picsum.photos/40/40'} alt={p.name} />
+                                            </div>
+                                            <div className="ml-4">
+                                                <div className="text-sm font-medium text-gray-900">{p.name}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">${p.sellingPrice.toFixed(2)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 text-right">
+                                        <Button variant="ghost" size="sm" onClick={() => handleView(p)}>Ver</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => handleEdit(p)}>Editar</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setProductToDelete(p)}>
+                                            <TrashIcon className="h-5 w-5 text-red-500" />
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </Table>
+                         {filteredProducts.length === 0 && (
+                            <div className="text-center p-16 text-gray-500">
+                                <p className="text-lg font-semibold">{searchTerm ? 'No se encontraron productos' : 'Aún no hay productos'}</p>
+                                <p className="mt-1 text-sm">{searchTerm ? 'Intenta con otra búsqueda.' : 'Puedes empezar añadiendo un nuevo producto o importando desde un archivo XLS.'}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct ? 'Editar Producto' : 'Añadir Nuevo Producto'}>
                 <ProductForm

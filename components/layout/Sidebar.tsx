@@ -50,19 +50,20 @@ const NavHeader: React.FC<{ label: string; isCollapsed: boolean }> = ({ label, i
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onLogout, isCollapsed, isOpenOnMobile, onClose }) => {
     
-    const mainNavItems = [
-        { id: 'dashboard', label: 'Panel', icon: <DashboardIcon /> },
-        { id: 'sales', label: 'Ventas', icon: <SalesIcon /> },
-        { id: 'reports', label: 'Reportes', icon: <ReportsIcon /> },
-    ];
-
     const menuGroups = [
+        {
+            title: 'Inicio',
+            items: [
+                { id: 'dashboard', label: 'Panel', icon: <DashboardIcon /> },
+                { id: 'sales', label: 'Ventas', icon: <SalesIcon /> },
+                { id: 'reports', label: 'Reportes', icon: <ReportsIcon /> },
+            ]
+        },
         {
             title: 'Operaciones',
             items: [
                 { id: 'pos', label: 'Punto de Venta', icon: <POSIcon /> },
-                { id: 'onlineOrders', label: 'Pedidos Online', icon: <BellIcon /> },
-                { id: 'pendingPurchases', label: 'Compras Pendientes', icon: <InboxArrowDownIcon /> },
+                { id: 'purchases', label: 'Compras', icon: <PurchasesIcon /> },
             ]
         },
         {
@@ -72,13 +73,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onLogout, is
                 { id: 'categories', label: 'Rubros', icon: <TagIcon /> },
                 { id: 'clients', label: 'Clientes', icon: <ClientsIcon /> },
                 { id: 'suppliers', label: 'Proveedores', icon: <SuppliersIcon /> },
-                { id: 'purchases', label: 'Compras', icon: <PurchasesIcon /> },
+            ]
+        },
+        {
+            title: 'Autorizaciones',
+            items: [
+                { id: 'onlineOrders', label: 'Pedidos Pendientes Online', icon: <BellIcon /> },
+                { id: 'pendingPurchases', label: 'Compras Pendientes', icon: <InboxArrowDownIcon /> },
             ]
         },
         {
             title: 'Catálogo',
             items: [
-                { id: 'catalog', label: 'Ver Catálogo', icon: <ProductsIcon /> },
+                { id: 'catalog', label: 'Catalogo Online Ventas', icon: <ProductsIcon /> },
             ]
         },
         {
@@ -96,20 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onLogout, is
                 <span className={`text-2xl font-bold text-gray-800 transition-opacity duration-200 whitespace-nowrap ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>MRK</span>
             </div>
             <div className="flex-1 overflow-y-auto py-4 px-3">
-                <ul className="space-y-2">
-                    {mainNavItems.map(item => (
-                        <NavItem
-                            key={item.id}
-                            label={item.label}
-                            icon={item.icon}
-                            isActive={currentView === item.id}
-                            onClick={() => onNavigate(item.id)}
-                            isCollapsed={isCollapsed}
-                        />
-                    ))}
-                </ul>
-                
-                {menuGroups.map(group => (
+                 {menuGroups.map(group => (
                     <div key={group.title}>
                         <NavHeader label={group.title} isCollapsed={isCollapsed} />
                         <ul className="space-y-2">

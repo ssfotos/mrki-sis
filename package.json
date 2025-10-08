@@ -1,5 +1,5 @@
 {
-  "name": "mrki--sistema-de-inventario-y-pos",
+  "name": "mrki--sistema-de-inventario-y-pos-bd",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,8 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "idb": "8"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

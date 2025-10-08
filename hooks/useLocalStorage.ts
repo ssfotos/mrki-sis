@@ -1,7 +1,9 @@
 
-import { useState, useEffect } from 'react';
 
-function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
+
+// Fix: Correctly type the return value without using the 'React' namespace which was not imported.
+function useLocalStorage<T,>(key: string, initialValue: T): [T, Dispatch<SetStateAction<T>>] {
     const [storedValue, setStoredValue] = useState<T>(() => {
         if (typeof window === 'undefined') {
             return initialValue;

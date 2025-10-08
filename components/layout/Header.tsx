@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { BellIcon, MenuIcon, ChevronDoubleLeftIcon } from '../ui/Icon';
+import { BellIcon, MenuIcon, ChevronDoubleLeftIcon, InboxArrowDownIcon } from '../ui/Icon';
 
 interface HeaderProps {
     onToggleSidebar: () => void;
@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onToggleMobileSidebar, isSidebarCollapsed }) => {
-  const { lowStockProducts, onlineOrders } = useApp();
+  const { lowStockProducts, onlineOrders, exportData } = useApp();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -41,7 +41,15 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onToggleMobileSidebar,
          </button>
         <h1 className="text-xl font-semibold text-gray-700 ml-2 hidden sm:block">Sistema de Gestión</h1>
       </div>
-      <div className="flex items-center">
+      <div className="flex items-center space-x-2">
+        <button
+            onClick={exportData}
+            className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            aria-label="Descargar copia de seguridad"
+            title="Descargar copia de seguridad"
+        >
+            <InboxArrowDownIcon className="h-6 w-6" />
+        </button>
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}

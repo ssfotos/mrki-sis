@@ -8,7 +8,7 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
 const SalesRecordView: React.FC = () => {
-    const { sales, clients, products } = useApp();
+    const { sales, clients, products, cancelSale } = useApp();
     
     const getMonthStart = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     const getToday = () => new Date().toISOString().split('T')[0];
@@ -17,6 +17,8 @@ const SalesRecordView: React.FC = () => {
     const [endDate, setEndDate] = useState<string>(getToday());
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+    const [isConfirmCancelOpen, setIsConfirmCancelOpen] = useState(false);
+
 
     const clientMap = useMemo(() => {
         return new Map(clients.map(client => [client.id, client.name]));
@@ -40,8 +42,17 @@ const SalesRecordView: React.FC = () => {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [sales, startDate, endDate, searchTerm, clientMap]);
     
+    const handleConfirmCancelSale = async () => {
+        if (selectedSale) {
+            await cancelSale(selectedSale.id);
+            setIsConfirmCancelOpen(false);
+            setSelectedSale(null);
+        }
+    };
+    
     const SaleDetailModal = () => {
         if (!selectedSale) return null;
+
         return (
             <Modal isOpen={!!selectedSale} onClose={() => setSelectedSale(null)} title={`Detalles de la Venta #${selectedSale.id.slice(-6)}`}>
                  <div className="space-y-4">
@@ -70,8 +81,13 @@ const SalesRecordView: React.FC = () => {
                         Total: ${selectedSale.total.toFixed(2)}
                     </div>
                 </div>
-                 <div className="flex justify-end pt-6">
-                     <Button variant="secondary" onClick={() => setSelectedSale(null)}>Cerrar</Button>
+                 <div className="flex justify-between items-center pt-6">
+                    <div>
+                        <Button variant="danger" onClick={() => setIsConfirmCancelOpen(true)} disabled={selectedSale.status === 'cancelled'}>
+                            {selectedSale.status === 'cancelled' ? 'Venta Anulada' : 'Anular Venta'}
+                        </Button>
+                    </div>
+                    <Button variant="secondary" onClick={() => setSelectedSale(null)}>Cerrar</Button>
                 </div>
             </Modal>
         );
@@ -106,9 +122,9 @@ const SalesRecordView: React.FC = () => {
             </Card>
 
             <Card>
-                 <Table headers={['ID Venta', 'Fecha', 'Cliente', 'Origen', 'Total', 'Acciones']}>
+                 <Table headers={['ID Venta', 'Fecha', 'Cliente', 'Origen', 'Total', 'Estado', 'Acciones']}>
                     {filteredSales.map(sale => (
-                        <tr key={sale.id}>
+                        <tr key={sale.id} className={sale.status === 'cancelled' ? 'bg-gray-100 text-gray-500' : ''}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{sale.id.slice(-6)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sale.date).toLocaleDateString()}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -120,6 +136,15 @@ const SalesRecordView: React.FC = () => {
                                </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">${sale.total.toFixed(2)}</td>
+                             <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                    sale.status === 'cancelled' 
+                                    ? 'bg-red-100 text-red-800' 
+                                    : 'bg-green-100 text-green-800'
+                                }`}>
+                                    {sale.status === 'cancelled' ? 'Anulada' : 'Completada'}
+                                </span>
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <Button variant="ghost" size="sm" onClick={() => setSelectedSale(sale)}>Ver Detalles</Button>
                             </td>
@@ -130,6 +155,26 @@ const SalesRecordView: React.FC = () => {
             </Card>
 
             <SaleDetailModal />
+            
+            <Modal
+                isOpen={isConfirmCancelOpen}
+                onClose={() => setIsConfirmCancelOpen(false)}
+                title="Confirmar Anulación"
+            >
+                <p>
+                    ¿Estás seguro de que quieres anular la venta <strong>#{selectedSale?.id.slice(-6)}</strong>?
+                    <br />
+                    El stock de los productos involucrados será restaurado. Esta acción no se puede deshacer.
+                </p>
+                <div className="flex justify-end space-x-2 pt-6">
+                    <Button variant="secondary" onClick={() => setIsConfirmCancelOpen(false)}>
+                        No, Cancelar
+                    </Button>
+                    <Button variant="danger" onClick={handleConfirmCancelSale}>
+                        Sí, Anular Venta
+                    </Button>
+                </div>
+            </Modal>
         </div>
     );
 };

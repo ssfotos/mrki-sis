@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Client } from '../../types';
 import Card from '../ui/Card';
@@ -60,6 +60,20 @@ const ClientsView: React.FC = () => {
     const { clients, addClient, updateClient, deleteClient } = useApp();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredClients = useMemo(() => {
+        if (!searchTerm) {
+            return clients;
+        }
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return clients.filter(client =>
+            client.name.toLowerCase().includes(lowercasedTerm) ||
+            client.phone.toLowerCase().includes(lowercasedTerm) ||
+            client.email.toLowerCase().includes(lowercasedTerm) ||
+            client.dni.toLowerCase().includes(lowercasedTerm)
+        );
+    }, [clients, searchTerm]);
 
     const handleSave = (data: Omit<Client, 'id'> | Client) => {
         if ('id' in data) {
@@ -87,9 +101,18 @@ const ClientsView: React.FC = () => {
                     <PlusIcon className="h-5 w-5 mr-2" /> Añadir Cliente
                 </Button>
             </div>
+
+             <Input
+                type="search"
+                placeholder="Buscar por nombre, teléfono, email o DNI..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                containerClassName="w-full md:w-2/5"
+            />
+            
             <Card>
                 <Table headers={['Nombre', 'Teléfono', 'Email', 'DNI / CUIT', 'Acciones']}>
-                    {clients.map(c => (
+                    {filteredClients.map(c => (
                         <tr key={c.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.name}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.phone}</td>
@@ -104,7 +127,11 @@ const ClientsView: React.FC = () => {
                         </tr>
                     ))}
                 </Table>
-                 {clients.length === 0 && <p className="text-center text-gray-500 py-4">No hay clientes registrados.</p>}
+                 {filteredClients.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">
+                        {searchTerm ? 'No se encontraron clientes con ese criterio.' : 'No hay clientes registrados.'}
+                    </p>
+                 )}
             </Card>
 
              <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingClient ? 'Editar Cliente' : 'Añadir Nuevo Cliente'}>

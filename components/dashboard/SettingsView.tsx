@@ -71,16 +71,16 @@ const SettingsView: React.FC = () => {
         if(event.target) event.target.value = ''; // Reset file input
     };
     
-    const handleConfirmImport = () => {
+    const handleConfirmImport = async () => {
         if (!importPreviewData) return;
 
-        setProducts(importPreviewData.products || []);
-        setSuppliers(importPreviewData.suppliers || []);
-        setSales(importPreviewData.sales || []);
-        setPurchases(importPreviewData.purchases || []);
-        setOnlineOrders(importPreviewData.onlineOrders || []);
-        setCategories(importPreviewData.categories || []);
-        setClients(importPreviewData.clients || []);
+        await setProducts(importPreviewData.products || []);
+        await setSuppliers(importPreviewData.suppliers || []);
+        await setSales(importPreviewData.sales || []);
+        await setPurchases(importPreviewData.purchases || []);
+        await setOnlineOrders(importPreviewData.onlineOrders || []);
+        await setCategories(importPreviewData.categories || []);
+        await setClients(importPreviewData.clients || []);
         setCart([]);
         
         setImportConfirmModalOpen(false);
@@ -94,7 +94,7 @@ const SettingsView: React.FC = () => {
         setConfirmModalOpen(true);
     };
 
-    const handleClearData = () => {
+    const handleClearData = async () => {
         // The password for clearing data should also be dynamic
         const success = updatePassword(adminPassword, adminPassword);
         if (!success) {
@@ -102,13 +102,13 @@ const SettingsView: React.FC = () => {
             return;
         }
         
-        setProducts([]);
-        setSuppliers([]);
-        setSales([]);
-        setPurchases([]);
-        setOnlineOrders([]);
-        setCategories([]);
-        setClients([]);
+        await setProducts([]);
+        await setSuppliers([]);
+        await setSales([]);
+        await setPurchases([]);
+        await setOnlineOrders([]);
+        await setCategories([]);
+        await setClients([]);
         setCart([]);
         
         setConfirmModalOpen(false);

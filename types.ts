@@ -38,6 +38,7 @@ export interface Sale {
   paymentMethod: 'cash' | 'card';
   clientId?: string; // Link to the client table
   origin: 'pos' | 'online'; // Where the sale was made
+  status?: 'completed' | 'cancelled';
 }
 
 export interface PurchaseItem {
@@ -92,7 +93,7 @@ export interface StockHistory {
   id: string;
   productId: string;
   date: string; // ISO string
-  type: 'sale' | 'purchase' | 'manual_adjustment' | 'initial_stock';
+  type: 'sale' | 'purchase' | 'manual_adjustment' | 'initial_stock' | 'sale_cancellation';
   quantityChange: number; // e.g., -2 for a sale, +10 for a purchase
   newStockLevel: number;
   notes?: string; // e.g., "Sale ID: sale-123", "Purchase ID: purch-456"
